@@ -9,9 +9,11 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@heroui/react": "^2.8.5",
+    "framer-motion": "^12.23.24",
+    "next": "16.0.0",
     "react": "19.2.0",
-    "react-dom": "19.2.0",
-    "next": "16.0.0"
+    "react-dom": "19.2.0"
   },
   "devDependencies": {
     "typescript": "^5",
@@ -22,5 +24,8 @@
     "tailwindcss": "^4",
     "eslint": "^9",
     "eslint-config-next": "16.0.0"
-  }
+  },
+  "trustedDependencies": [
+    "unrs-resolver"
+  ]
 }
