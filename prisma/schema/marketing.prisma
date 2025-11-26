@@ -1,0 +1,291 @@
+model EMCoupons {
+  id                BigInt    @id @default(autoincrement())
+  vendorId          BigInt?   @map("vendor_id")
+  code              String    @db.VarChar(50)
+  discountType      String    @map("discount_type") @db.VarChar(20)
+  discountValue     Decimal   @map("discount_value") @db.Decimal(10, 2)
+  minPurchaseAmount Decimal?  @map("min_purchase_amount") @db.Decimal(10, 2)
+  maxDiscountAmount Decimal?  @map("max_discount_amount") @db.Decimal(10, 2)
+  usageLimit        Int?      @map("usage_limit")
+  usageCount        Int?      @default(0) @map("usage_count")
+  usagePerUser      Int?      @default(1) @map("usage_per_user")
+  startsAt          DateTime? @map("starts_at") @db.Timestamp
+  expiresAt         DateTime? @map("expires_at") @db.Timestamp
+  isActive          Boolean?  @default(true) @map("is_active")
+  createdAt         DateTime? @default(now()) @map("created_at") @db.Timestamp
+
+  vendor EMVendors? @relation(fields: [vendorId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  products    EMCouponProducts[]
+  categories  EMCouponCategories[]
+  usage       EMCouponUsage[]
+  cartCoupons EMCartCoupons[]
+
+  @@map("EMCoupons")
+  @@index([vendorId])
+  @@unique([code, vendorId])
+  @@index([isActive, expiresAt])
+}
+
+model EMCouponProducts {
+  id        BigInt @id @default(autoincrement())
+  couponId  BigInt @map("coupon_id")
+  productId BigInt @map("product_id")
+
+  coupon  EMCoupons  @relation(fields: [couponId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  product EMProducts @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("EMCouponProducts")
+  @@index([couponId])
+  @@index([productId])
+  @@unique([couponId, productId])
+}
+
+model EMCouponCategories {
+  id         BigInt @id @default(autoincrement())
+  couponId   BigInt @map("coupon_id")
+  categoryId BigInt @map("category_id")
+
+  coupon   EMCoupons    @relation(fields: [couponId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  category EMCategories @relation(fields: [categoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("EMCouponCategories")
+  @@index([couponId])
+  @@index([categoryId])
+  @@unique([couponId, categoryId])
+}
+
+model EMCouponUsage {
+  id             BigInt    @id @default(autoincrement())
+  couponId       BigInt    @map("coupon_id")
+  userId         BigInt    @map("user_id")
+  orderId        BigInt    @map("order_id")
+  discountAmount Decimal?  @map("discount_amount") @db.Decimal(10, 2)
+  usedAt         DateTime? @map("used_at") @db.Timestamp
+
+  coupon EMCoupons @relation(fields: [couponId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user   User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  order  EMOrders  @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("EMCouponUsage")
+  @@index([couponId, userId])
+  @@index([orderId])
+}
+
+model EMVouchers {
+  id                BigInt    @id @default(autoincrement())
+  vendorId          BigInt?   @map("vendor_id")
+  name              String    @db.VarChar(255)
+  code              String    @db.VarChar(50)
+  discountType      String    @map("discount_type") @db.VarChar(20)
+  discountValue     Decimal   @map("discount_value") @db.Decimal(10, 2)
+  minPurchaseAmount Decimal?  @map("min_purchase_amount") @db.Decimal(10, 2)
+  maxDiscountAmount Decimal?  @map("max_discount_amount") @db.Decimal(10, 2)
+  totalQuantity     Int       @map("total_quantity")
+  claimedQuantity   Int?      @default(0) @map("claimed_quantity")
+  usagePerUser      Int?      @default(1) @map("usage_per_user")
+  startsAt          DateTime  @map("starts_at") @db.Timestamp
+  expiresAt         DateTime  @map("expires_at") @db.Timestamp
+  isActive          Boolean?  @default(true) @map("is_active")
+  createdAt         DateTime? @default(now()) @map("created_at") @db.Timestamp
+
+  vendor EMVendors? @relation(fields: [vendorId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  products     EMVoucherProducts[]
+  categories   EMVoucherCategories[]
+  userVouchers UserVouchers[]
+
+  @@map("EMVouchers")
+  @@index([vendorId])
+  @@index([code])
+  @@index([isActive, startsAt, expiresAt])
+}
+
+model EMVoucherProducts {
+  id        BigInt @id @default(autoincrement())
+  voucherId BigInt @map("voucher_id")
+  productId BigInt @map("product_id")
+
+  voucher EMVouchers @relation(fields: [voucherId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  product EMProducts @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("EMVoucherProducts")
+  @@index([voucherId])
+  @@index([productId])
+  @@unique([voucherId, productId])
+}
+
+model EMVoucherCategories {
+  id         BigInt @id @default(autoincrement())
+  voucherId  BigInt @map("voucher_id")
+  categoryId BigInt @map("category_id")
+
+  voucher  EMVouchers   @relation(fields: [voucherId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  category EMCategories @relation(fields: [categoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("EMVoucherCategories")
+  @@index([voucherId])
+  @@index([categoryId])
+  @@unique([voucherId, categoryId])
+}
+
+model EMFlashSales {
+  id          BigInt    @id @default(autoincrement())
+  name        String    @db.VarChar(255)
+  slug        String    @unique @db.VarChar(255)
+  description String?   @db.Text
+  bannerUrl   String?   @map("banner_url") @db.VarChar(500)
+  startsAt    DateTime  @map("starts_at") @db.Timestamp
+  endsAt      DateTime  @map("ends_at") @db.Timestamp
+  isActive    Boolean?  @default(true) @map("is_active")
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamp
+  updatedAt   DateTime? @default(now()) @map("updated_at") @db.Timestamp
+
+  products   EMFlashSaleProducts[]
+  userLimits EMFlashSaleUserLimits[]
+  purchases  EMFlashSalePurchases[]
+  cartItems  EMCartItems[]
+
+  @@map("EMFlashSales")
+  @@index([slug])
+  @@index([isActive, startsAt, endsAt])
+}
+
+model EMFlashSaleProducts {
+  id               BigInt    @id @default(autoincrement())
+  flashSaleId      BigInt    @map("flash_sale_id")
+  productVariantId BigInt    @map("product_variant_id")
+  originalPrice    Decimal   @map("original_price") @db.Decimal(10, 2)
+  flashPrice       Decimal   @map("flash_price") @db.Decimal(10, 2)
+  stockLimit       Int?      @map("stock_limit")
+  soldCount        Int?      @default(0) @map("sold_count")
+  maxPerUser       Int?      @default(5) @map("max_per_user")
+  createdAt        DateTime? @default(now()) @map("created_at") @db.Timestamp
+
+  flashSale      EMFlashSales      @relation(fields: [flashSaleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  productVariant EMProductVariants @relation(fields: [productVariantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  userLimits EMFlashSaleUserLimits[]
+  purchases  EMFlashSalePurchases[]
+
+  @@map("EMFlashSaleProducts")
+  @@index([flashSaleId])
+  @@index([productVariantId])
+  @@unique([flashSaleId, productVariantId])
+}
+
+model EMFlashSaleUserLimits {
+  id                 BigInt    @id @default(autoincrement())
+  flashSaleId        BigInt    @map("flash_sale_id")
+  flashSaleProductId BigInt    @map("flash_sale_product_id")
+  userId             BigInt    @map("user_id")
+  purchasedCount     Int?      @default(0) @map("purchased_count")
+  updatedAt          DateTime? @default(now()) @map("updated_at") @db.Timestamp
+
+  flashSale        EMFlashSales        @relation(fields: [flashSaleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  flashSaleProduct EMFlashSaleProducts @relation(fields: [flashSaleProductId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("EMFlashSaleUserLimits")
+  @@unique([flashSaleId, flashSaleProductId, userId])
+  @@index([userId])
+}
+
+model EMFlashSalePurchases {
+  id                 BigInt    @id @default(autoincrement())
+  flashSaleId        BigInt    @map("flash_sale_id")
+  flashSaleProductId BigInt    @map("flash_sale_product_id")
+  orderId            BigInt    @map("order_id")
+  userId             BigInt    @map("user_id")
+  quantity           Int
+  price              Decimal   @db.Decimal(10, 2)
+  createdAt          DateTime? @default(now()) @map("created_at") @db.Timestamp
+
+  flashSale        EMFlashSales        @relation(fields: [flashSaleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  flashSaleProduct EMFlashSaleProducts @relation(fields: [flashSaleProductId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  order            EMOrders            @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("EMFlashSalePurchases")
+  @@index([flashSaleId])
+  @@index([flashSaleProductId])
+  @@index([orderId])
+  @@index([userId])
+}
+
+model EMBanners {
+  id             BigInt    @id @default(autoincrement())
+  vendorId       BigInt?   @map("vendor_id")
+  title          String?   @db.VarChar(255)
+  imageUrl       String    @map("image_url") @db.VarChar(500)
+  mobileImageUrl String?   @map("mobile_image_url") @db.VarChar(500)
+  linkUrl        String?   @map("link_url") @db.VarChar(500)
+  linkType       String?   @map("link_type") @db.VarChar(50)
+  linkId         BigInt?   @map("link_id")
+  position       String    @db.VarChar(50)
+  displayOrder   Int?      @default(0) @map("display_order")
+  startsAt       DateTime? @map("starts_at") @db.Timestamp
+  endsAt         DateTime? @map("ends_at") @db.Timestamp
+  isActive       Boolean?  @default(true) @map("is_active")
+  clickCount     Int?      @default(0) @map("click_count")
+  createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamp
+  updatedAt      DateTime? @default(now()) @map("updated_at") @db.Timestamp
+
+  vendor EMVendors? @relation(fields: [vendorId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("EMBanners")
+  @@index([vendorId])
+  @@index([position])
+  @@index([isActive, startsAt, endsAt, displayOrder])
+}
+
+model EMReferrals {
+  id           BigInt    @id @default(autoincrement())
+  referrerId   BigInt    @map("referrer_id")
+  referredId   BigInt    @map("referred_id")
+  status       String?   @default("pending") @db.VarChar(20)
+  rewardAmount Decimal?  @map("reward_amount") @db.Decimal(10, 2)
+  rewardPaidAt DateTime? @map("reward_paid_at") @db.Timestamp
+  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamp
+
+  referrer User @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  referred User @relation("Referred", fields: [referredId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("EMReferrals")
+  @@index([referrerId])
+  @@index([referredId])
+}
+
+model EMGiftCards {
+  id             BigInt    @id @default(autoincrement())
+  code           String    @unique @db.VarChar(50)
+  initialBalance Decimal   @map("initial_balance") @db.Decimal(10, 2)
+  currentBalance Decimal   @map("current_balance") @db.Decimal(10, 2)
+  currency       String?   @default("USD") @db.VarChar(3)
+  isActive       Boolean?  @default(true) @map("is_active")
+  expiresAt      DateTime? @map("expires_at") @db.Timestamp
+  createdBy      BigInt?   @map("created_by")
+  createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamp
+
+  creator User? @relation(fields: [createdBy], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  transactions EMGiftCardTransactions[]
+
+  @@map("EMGiftCards")
+}
+
+model EMGiftCardTransactions {
+  id              BigInt    @id @default(autoincrement())
+  giftCardId      BigInt    @map("gift_card_id")
+  orderId         BigInt    @map("order_id")
+  amount          Decimal   @db.Decimal(10, 2)
+  transactionType String?   @map("transaction_type") @db.VarChar(20)
+  createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamp
+
+  giftCard EMGiftCards @relation(fields: [giftCardId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  order    EMOrders    @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("EMGiftCardTransactions")
+  @@index([giftCardId])
+  @@index([orderId])
+}

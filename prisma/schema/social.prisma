@@ -1,0 +1,267 @@
+model EMReviews {
+  id                 BigInt    @id @default(autoincrement())
+  productId          BigInt    @map("product_id")
+  vendorId           BigInt    @map("vendor_id")
+  userId             BigInt?   @map("user_id")
+  orderId            BigInt?   @map("order_id")
+  rating             Int
+  title              String?   @db.VarChar(255)
+  comment            String?   @db.Text
+  vendorRating       Int?      @map("vendor_rating")
+  vendorComment      String?   @map("vendor_comment") @db.Text
+  isVerifiedPurchase Boolean?  @default(false) @map("is_verified_purchase")
+  moderationStatus   String?   @default("pending") @map("moderation_status") @db.VarChar(20)
+  rejectedAt         DateTime? @map("rejected_at") @db.Timestamp
+  rejectedReason     String?   @map("rejected_reason") @db.Text
+  helpfulCount       Int?      @default(0) @map("helpful_count")
+  createdAt          DateTime? @default(now()) @map("created_at") @db.Timestamp
+  updatedAt          DateTime? @default(now()) @map("updated_at") @db.Timestamp
+
+  product EMProducts @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  vendor  EMVendors  @relation(fields: [vendorId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user    User?      @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  order   EMOrders?  @relation(fields: [orderId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  images  EMReviewImages[]
+  helpful EMReviewHelpful[]
+  replies EMReviewReplies[]
+  reports EMReviewReports[]
+
+  @@map("EMReviews")
+  @@index([productId])
+  @@index([vendorId])
+  @@index([userId])
+  @@index([productId, moderationStatus])
+  @@index([rating])
+}
+
+model EMReviewImages {
+  id           BigInt    @id @default(autoincrement())
+  reviewId     BigInt    @map("review_id")
+  imageUrl     String    @map("image_url") @db.VarChar(500)
+  displayOrder Int?      @default(0) @map("display_order")
+  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamp
+
+  review EMReviews @relation(fields: [reviewId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("EMReviewImages")
+  @@index([reviewId])
+}
+
+model EMReviewHelpful {
+  id        BigInt    @id @default(autoincrement())
+  reviewId  BigInt    @map("review_id")
+  userId    BigInt    @map("user_id")
+  isHelpful Boolean   @map("is_helpful")
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamp
+
+  review EMReviews @relation(fields: [reviewId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user   User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("EMReviewHelpful")
+  @@unique([reviewId, userId])
+  @@index([userId])
+}
+
+model EMReviewReplies {
+  id        BigInt    @id @default(autoincrement())
+  reviewId  BigInt    @map("review_id")
+  vendorId  BigInt    @map("vendor_id")
+  replyText String    @map("reply_text") @db.Text
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamp
+  updatedAt DateTime? @default(now()) @map("updated_at") @db.Timestamp
+
+  review EMReviews @relation(fields: [reviewId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  vendor EMVendors @relation(fields: [vendorId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("EMReviewReplies")
+  @@index([reviewId])
+  @@index([vendorId])
+}
+
+model EMReviewReports {
+  id          BigInt    @id @default(autoincrement())
+  reviewId    BigInt    @map("review_id")
+  reportedBy  BigInt    @map("reported_by")
+  reason      String    @db.VarChar(100)
+  description String?   @db.Text
+  status      String?   @default("pending") @db.VarChar(20)
+  adminNotes  String?   @map("admin_notes") @db.Text
+  resolvedAt  DateTime? @map("resolved_at") @db.Timestamp
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamp
+
+  review   EMReviews @relation(fields: [reviewId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  reporter User      @relation(fields: [reportedBy], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("EMReviewReports")
+  @@index([reviewId])
+  @@index([reportedBy])
+  @@index([status])
+}
+
+model EMWishlists {
+  id         BigInt    @id @default(autoincrement())
+  userId     BigInt    @map("user_id")
+  name       String?   @default("My Wishlist") @db.VarChar(100)
+  isPublic   Boolean?  @default(false) @map("is_public")
+  shareToken String?   @unique @map("share_token") @db.VarChar(255)
+  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamp
+  updatedAt  DateTime? @default(now()) @map("updated_at") @db.Timestamp
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  items EMWishlistItems[]
+
+  @@map("EMWishlists")
+  @@index([userId])
+}
+
+model EMWishlistItems {
+  id               BigInt    @id @default(autoincrement())
+  wishlistId       BigInt    @map("wishlist_id")
+  productId        BigInt    @map("product_id")
+  productVariantId BigInt    @map("product_variant_id")
+  createdAt        DateTime? @default(now()) @map("created_at") @db.Timestamp
+
+  wishlist       EMWishlists       @relation(fields: [wishlistId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  product        EMProducts        @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  productVariant EMProductVariants @relation(fields: [productVariantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("EMWishlistItems")
+  @@index([wishlistId])
+  @@unique([wishlistId, productId, productVariantId])
+}
+
+model EMNotifications {
+  id            BigInt    @id @default(autoincrement())
+  userId        BigInt    @map("user_id")
+  type          String    @db.VarChar(50)
+  title         String    @db.VarChar(255)
+  message       String    @db.Text
+  referenceType String?   @map("reference_type") @db.VarChar(50)
+  referenceId   BigInt?   @map("reference_id")
+  imageUrl      String?   @map("image_url") @db.VarChar(500)
+  actionUrl     String?   @map("action_url") @db.VarChar(500)
+  isRead        Boolean?  @default(false) @map("is_read")
+  createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamp
+  readAt        DateTime? @map("read_at") @db.Timestamp
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  deliveries EMNotificationDeliveries[]
+
+  @@map("EMNotifications")
+  @@index([userId])
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@index([type])
+  @@index([userId, type, isRead])
+}
+
+model EMNotificationDeliveries {
+  id             BigInt    @id @default(autoincrement())
+  notificationId BigInt    @map("notification_id")
+  channel        String    @db.VarChar(20)
+  status         String    @db.VarChar(20)
+  sentAt         DateTime? @map("sent_at") @db.Timestamp
+  failedReason   String?   @map("failed_reason") @db.Text
+  createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamp
+
+  notification EMNotifications @relation(fields: [notificationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("EMNotificationDeliveries")
+  @@index([notificationId])
+  @@index([notificationId, channel])
+  @@index([status])
+}
+
+model EMChatConversations {
+  id               BigInt    @id @default(autoincrement())
+  userId           BigInt    @map("user_id")
+  vendorId         BigInt    @map("vendor_id")
+  productId        BigInt?   @map("product_id")
+  lastMessageAt    DateTime? @default(now()) @map("last_message_at") @db.Timestamp
+  isUserArchived   Boolean?  @default(false) @map("is_user_archived")
+  isVendorArchived Boolean?  @default(false) @map("is_vendor_archived")
+  createdAt        DateTime? @default(now()) @map("created_at") @db.Timestamp
+
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  vendor  EMVendors   @relation(fields: [vendorId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  product EMProducts? @relation(fields: [productId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  messages EMChatMessages[]
+
+  @@map("EMChatConversations")
+  @@index([userId])
+  @@index([vendorId])
+  @@unique([userId, vendorId])
+  @@index([lastMessageAt])
+}
+
+model EMChatMessages {
+  id             BigInt    @id @default(autoincrement())
+  conversationId BigInt    @map("conversation_id")
+  senderId       BigInt    @map("sender_id")
+  senderType     String    @map("sender_type") @db.VarChar(20)
+  message        String?   @db.Text
+  attachmentUrl  String?   @map("attachment_url") @db.VarChar(500)
+  attachmentType String?   @map("attachment_type") @db.VarChar(50)
+  isRead         Boolean?  @default(false) @map("is_read")
+  createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamp
+
+  conversation EMChatConversations @relation(fields: [conversationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  sender       User                @relation(fields: [senderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("EMChatMessages")
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@index([conversationId, isRead])
+}
+
+model EMDisputes {
+  id                 BigInt    @id @default(autoincrement())
+  orderId            BigInt    @map("order_id")
+  orderVendorGroupId BigInt    @map("order_vendor_group_id")
+  userId             BigInt?   @map("user_id")
+  vendorId           BigInt?   @map("vendor_id")
+  disputeType        String    @map("dispute_type") @db.VarChar(50)
+  reason             String    @db.Text
+  resolution         String?   @db.VarChar(50)
+  status             String?   @default("open") @db.VarChar(20)
+  adminNotes         String?   @map("admin_notes") @db.Text
+  resolvedAt         DateTime? @map("resolved_at") @db.Timestamp
+  createdAt          DateTime? @default(now()) @map("created_at") @db.Timestamp
+  updatedAt          DateTime? @default(now()) @map("updated_at") @db.Timestamp
+
+  order            EMOrders            @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  orderVendorGroup EMOrderVendorGroups @relation(fields: [orderVendorGroupId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user             User?               @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  vendor           EMVendors?          @relation(fields: [vendorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  messages EMDisputeMessages[]
+
+  @@map("EMDisputes")
+  @@index([orderId])
+  @@index([orderVendorGroupId])
+  @@index([userId])
+  @@index([vendorId])
+  @@index([status])
+}
+
+model EMDisputeMessages {
+  id            BigInt    @id @default(autoincrement())
+  disputeId     BigInt    @map("dispute_id")
+  senderId      BigInt?   @map("sender_id")
+  senderType    String    @map("sender_type") @db.VarChar(20)
+  message       String    @db.Text
+  attachmentUrl String?   @map("attachment_url") @db.VarChar(500)
+  createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamp
+
+  dispute EMDisputes @relation(fields: [disputeId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  sender  User?      @relation(fields: [senderId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@map("EMDisputeMessages")
+  @@index([disputeId])
+  @@index([createdAt])
+}

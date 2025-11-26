@@ -1,0 +1,89 @@
+// prisma/schema/line.prisma
+// Prisma schema for LINE bot features
+
+model LAGroup {
+  id           BigInt      @id @default(autoincrement())
+  groupId      String      @unique @map("group_id") // LINE Group ID from webhook
+  name         String?     @db.VarChar(255)
+  description  String?     @db.Text
+  memberAmount Int?        @map("member_amount")
+  createdAt    DateTime?   @default(now()) @map("created_at") @db.Timestamp
+  updatedAt    DateTime?   @default(now()) @map("updated_at") @db.Timestamp
+
+  messages     LAMessage[]
+
+  @@map("la_groups")
+  @@index([groupId])
+}
+
+model LAUser {
+  id            BigInt      @id @default(autoincrement())
+  userId        String      @unique @map("user_id") // LINE User ID
+  displayName   String?     @map("display_name") @db.VarChar(255)
+  pictureUrl    String?     @map("picture_url") @db.VarChar(500)
+  statusMessage String?     @map("status_message") @db.Text
+  createdAt     DateTime?   @default(now()) @map("created_at") @db.Timestamp
+  updatedAt     DateTime?   @default(now()) @map("updated_at") @db.Timestamp
+
+  messages      LAMessage[]
+
+  @@map("la_users")
+  @@index([userId])
+}
+
+model LAMessage {
+  id           BigInt          @id @default(autoincrement())
+  messageId    String          @unique @map("message_id") // LINE messageId
+  type         LAMessageType   @map("type")
+  text         String?         @db.Text
+  imageUrl     String?         @map("image_url") @db.VarChar(500)
+  driveFileId  String?         @map("drive_file_id") @db.VarChar(255)
+  timestamp    DateTime        @map("timestamp") @db.Timestamp
+  sourceType   LASourceType    @map("source_type")
+  lineUserId   String?         @map("line_user_id")
+  lineGroupId  String?         @map("line_group_id")
+
+  lineUser     LAUser?         @relation(fields: [lineUserId], references: [userId], onUpdate: Cascade)
+  lineGroup    LAGroup?        @relation(fields: [lineGroupId], references: [groupId], onUpdate: Cascade)
+  verification LAVerification?
+
+  @@map("la_messages")
+  @@index([messageId])
+  @@index([lineUserId])
+  @@index([lineGroupId])
+}
+
+model LAVerification {
+  id         BigInt    @id @default(autoincrement())
+  messageId  BigInt    @unique @map("message_id")
+  status     LAStatus  @default(PENDING)
+  notes      String?   @db.Text
+  verifiedAt DateTime? @default(now()) @map("verified_at") @db.Timestamp
+
+  message    LAMessage @relation(fields: [messageId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("la_verifications")
+  @@index([status])
+}
+
+enum LAStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum LAMessageType {
+  text
+  image
+  video
+  audio
+  sticker
+  file
+  location
+}
+
+enum LASourceType {
+  user
+  group
+  room
+}

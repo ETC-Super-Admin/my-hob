@@ -1,0 +1,302 @@
+model EMOrders {
+  id                      BigInt    @id @default(autoincrement())
+  userId                  BigInt?   @map("user_id")
+  orderNumber             String    @unique @map("order_number") @db.VarChar(50)
+  status                  String    @db.VarChar(20)
+  paymentStatus           String    @map("payment_status") @db.VarChar(20)
+  subtotal                Decimal   @db.Decimal(10, 2)
+  platformFee             Decimal?  @default(0) @map("platform_fee") @db.Decimal(10, 2)
+  taxAmount               Decimal?  @default(0) @map("tax_amount") @db.Decimal(10, 2)
+  shippingAmount          Decimal?  @default(0) @map("shipping_amount") @db.Decimal(10, 2)
+  discountAmount          Decimal?  @default(0) @map("discount_amount") @db.Decimal(10, 2)
+  totalAmount             Decimal   @map("total_amount") @db.Decimal(10, 2)
+  currency                String?   @default("USD") @db.VarChar(3)
+  shippingAddressSnapshot Json?     @map("shipping_address_snapshot")
+  billingAddressSnapshot  Json?     @map("billing_address_snapshot")
+  paymentExpireAt         DateTime? @map("payment_expire_at") @db.Timestamp
+  notes                   String?   @db.Text
+  createdAt               DateTime? @default(now()) @map("created_at") @db.Timestamp
+  updatedAt               DateTime? @default(now()) @map("updated_at") @db.Timestamp
+  deletedAt               DateTime? @map("deleted_at") @db.Timestamp
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  vendorGroups         EMOrderVendorGroups[]
+  items                EMOrderItems[]
+  payments             EMPayments[]
+  refunds              EMRefunds[]
+  returns              EMReturns[]
+  reviews              EMReviews[]
+  disputes             EMDisputes[]
+  statusHistory        EMOrderStatusHistory[]
+  couponUsage          EMCouponUsage[]
+  userVouchers         UserVouchers[]
+  giftCardTransactions EMGiftCardTransactions[]
+  flashSalePurchases   EMFlashSalePurchases[]
+  vendorTransactions   EMVendorTransactions[]
+
+  @@map("EMOrders")
+  @@index([userId])
+  @@index([orderNumber])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([createdAt])
+}
+
+model EMOrderVendorGroups {
+  id               BigInt    @id @default(autoincrement())
+  orderId          BigInt    @map("order_id")
+  vendorId         BigInt    @map("vendor_id")
+  groupNumber      String    @map("group_number") @db.VarChar(50)
+  status           String    @db.VarChar(20)
+  subtotal         Decimal   @db.Decimal(10, 2)
+  commissionAmount Decimal   @map("commission_amount") @db.Decimal(10, 2)
+  vendorEarning    Decimal   @map("vendor_earning") @db.Decimal(10, 2)
+  shippingAmount   Decimal?  @default(0) @map("shipping_amount") @db.Decimal(10, 2)
+  discountAmount   Decimal?  @default(0) @map("discount_amount") @db.Decimal(10, 2)
+  totalAmount      Decimal   @map("total_amount") @db.Decimal(10, 2)
+  notes            String?   @db.Text
+  createdAt        DateTime? @default(now()) @map("created_at") @db.Timestamp
+  updatedAt        DateTime? @default(now()) @map("updated_at") @db.Timestamp
+
+  order  EMOrders  @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  vendor EMVendors @relation(fields: [vendorId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  items         EMOrderItems[]
+  shipments     EMShipments[]
+  statusHistory EMOrderStatusHistory[]
+  disputes      EMDisputes[]
+
+  @@map("EMOrderVendorGroups")
+  @@index([orderId])
+  @@index([vendorId])
+  @@index([orderId, vendorId])
+  @@index([status])
+}
+
+model EMOrderItems {
+  id                 BigInt    @id @default(autoincrement())
+  orderId            BigInt    @map("order_id")
+  orderVendorGroupId BigInt    @map("order_vendor_group_id")
+  vendorId           BigInt?   @map("vendor_id")
+  productVariantId   BigInt?   @map("product_variant_id")
+  productName        String    @map("product_name") @db.VarChar(255)
+  variantDescription String?   @map("variant_description") @db.Text
+  sku                String    @db.VarChar(100)
+  quantity           Int
+  unitPrice          Decimal   @map("unit_price") @db.Decimal(10, 2)
+  totalPrice         Decimal   @map("total_price") @db.Decimal(10, 2)
+  commissionRate     Decimal   @map("commission_rate") @db.Decimal(5, 2)
+  commissionAmount   Decimal   @map("commission_amount") @db.Decimal(10, 2)
+  vendorEarning      Decimal   @map("vendor_earning") @db.Decimal(10, 2)
+  createdAt          DateTime? @default(now()) @map("created_at") @db.Timestamp
+
+  order            EMOrders           @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  orderVendorGroup EMOrderVendorGroups @relation(fields: [orderVendorGroupId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  vendor           EMVendors?          @relation(fields: [vendorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  productVariant   EMProductVariants?  @relation(fields: [productVariantId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  downloads   EMDigitalProductDownloads[]
+  returnItems EMReturnItems[]
+
+  @@map("EMOrderItems")
+  @@index([orderId])
+  @@index([orderVendorGroupId])
+  @@index([vendorId])
+  @@index([productVariantId])
+  @@index([orderId, productVariantId])
+  @@index([vendorId, orderId])
+}
+
+model EMCarts {
+  id        BigInt    @id @default(autoincrement())
+  userId    BigInt?   @map("user_id")
+  sessionId String?   @map("session_id") @db.VarChar(255)
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamp
+  updatedAt DateTime? @default(now()) @map("updated_at") @db.Timestamp
+  expiresAt DateTime? @map("expires_at") @db.Timestamp
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  items   EMCartItems[]
+  coupons EMCartCoupons[]
+
+  @@map("EMCarts")
+  @@index([userId])
+  @@index([sessionId])
+}
+
+model EMCartItems {
+  id               BigInt    @id @default(autoincrement())
+  cartId           BigInt    @map("cart_id")
+  vendorId         BigInt    @map("vendor_id")
+  productVariantId BigInt    @map("product_variant_id")
+  quantity         Int       @default(1)
+  price            Decimal   @db.Decimal(10, 2)
+  isSelected       Boolean?  @default(true) @map("is_selected")
+  flashSaleId      BigInt?   @map("flash_sale_id")
+  reservedUntil    DateTime? @map("reserved_until") @db.Timestamp
+  createdAt        DateTime? @default(now()) @map("created_at") @db.Timestamp
+  updatedAt        DateTime? @default(now()) @map("updated_at") @db.Timestamp
+
+  cart           EMCarts           @relation(fields: [cartId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  vendor         EMVendors         @relation(fields: [vendorId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  productVariant EMProductVariants @relation(fields: [productVariantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  flashSale      EMFlashSales?     @relation(fields: [flashSaleId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@map("EMCartItems")
+  @@index([cartId])
+  @@index([vendorId])
+  @@unique([cartId, productVariantId])
+  @@index([flashSaleId])
+}
+
+model EMCartCoupons {
+  id             BigInt    @id @default(autoincrement())
+  cartId         BigInt    @map("cart_id")
+  couponId       BigInt    @map("coupon_id")
+  discountAmount Decimal   @map("discount_amount") @db.Decimal(10, 2)
+  appliedAt      DateTime? @default(now()) @map("applied_at") @db.Timestamp
+
+  cart   EMCarts   @relation(fields: [cartId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  coupon EMCoupons @relation(fields: [couponId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("EMCartCoupons")
+  @@index([cartId])
+  @@index([couponId])
+  @@unique([cartId, couponId])
+}
+
+model EMPayments {
+  id            BigInt    @id @default(autoincrement())
+  orderId       BigInt    @map("order_id")
+  transactionId String?   @unique @map("transaction_id") @db.VarChar(255)
+  paymentMethod String    @map("payment_method") @db.VarChar(50)
+  amount        Decimal   @db.Decimal(10, 2)
+  currency      String?   @default("USD") @db.VarChar(3)
+  status        String    @db.VarChar(20)
+  paymentData   Json?     @map("payment_data")
+  paidAt        DateTime? @map("paid_at") @db.Timestamp
+  createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamp
+  updatedAt     DateTime? @default(now()) @map("updated_at") @db.Timestamp
+
+  order EMOrders @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  refunds EMRefunds[]
+
+  @@map("EMPayments")
+  @@index([orderId])
+  @@index([transactionId])
+  @@index([status])
+}
+
+model EMRefunds {
+  id           BigInt    @id @default(autoincrement())
+  refundNumber String    @unique @map("refund_number") @db.VarChar(100)
+  orderId      BigInt    @map("order_id")
+  paymentId    BigInt?   @map("payment_id")
+  amount       Decimal   @db.Decimal(10, 2)
+  currency     String?   @default("USD") @db.VarChar(3)
+  reason       String?   @db.Text
+  status       String?   @default("pending") @db.VarChar(20)
+  processedAt  DateTime? @map("processed_at") @db.Timestamp
+  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamp
+  updatedAt    DateTime? @default(now()) @map("updated_at") @db.Timestamp
+
+  order   EMOrders    @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  payment EMPayments? @relation(fields: [paymentId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@map("EMRefunds")
+  @@index([orderId])
+  @@index([paymentId])
+  @@index([refundNumber])
+  @@index([status])
+}
+
+model EMReturns {
+  id           BigInt    @id @default(autoincrement())
+  returnNumber String    @unique @map("return_number") @db.VarChar(100)
+  orderId      BigInt    @map("order_id")
+  userId       BigInt?   @map("user_id")
+  status       String?   @default("requested") @db.VarChar(20)
+  reasonId     BigInt?   @map("reason_id")
+  notes        String?   @db.Text
+  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamp
+  updatedAt    DateTime? @default(now()) @map("updated_at") @db.Timestamp
+
+  order  EMOrders         @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user   User?            @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  reason EMReturnReasons? @relation(fields: [reasonId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  items EMReturnItems[]
+
+  @@map("EMReturns")
+  @@index([orderId])
+  @@index([userId])
+}
+
+model EMReturnItems {
+  id          BigInt @id @default(autoincrement())
+  returnId    BigInt @map("return_id")
+  orderItemId BigInt @map("order_item_id")
+  quantity    Int
+
+  return    EMReturns    @relation(fields: [returnId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  orderItem EMOrderItems @relation(fields: [orderItemId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("EMReturnItems")
+  @@index([returnId])
+  @@index([orderItemId])
+}
+
+model EMReturnReasons {
+  id       BigInt   @id @default(autoincrement())
+  reason   String   @db.VarChar(255)
+  isActive Boolean? @default(true) @map("is_active")
+
+  returns EMReturns[]
+
+  @@map("EMReturnReasons")
+}
+
+model EMShipments {
+  id                 BigInt    @id @default(autoincrement())
+  orderVendorGroupId BigInt    @map("order_vendor_group_id")
+  vendorId           BigInt    @map("vendor_id")
+  trackingNumber     String?   @map("tracking_number") @db.VarChar(255)
+  carrier            String?   @db.VarChar(100)
+  shippingMethod     String?   @map("shipping_method") @db.VarChar(100)
+  status             String    @db.VarChar(20)
+  shippedAt          DateTime? @map("shipped_at") @db.Timestamp
+  estimatedDelivery  DateTime? @map("estimated_delivery") @db.Timestamp
+  deliveredAt        DateTime? @map("delivered_at") @db.Timestamp
+  createdAt          DateTime? @default(now()) @map("created_at") @db.Timestamp
+  updatedAt          DateTime? @default(now()) @map("updated_at") @db.Timestamp
+
+  orderVendorGroup EMOrderVendorGroups @relation(fields: [orderVendorGroupId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  vendor           EMVendors           @relation(fields: [vendorId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  events EMShippingEvents[]
+
+  @@map("EMShipments")
+  @@index([orderVendorGroupId])
+  @@index([vendorId])
+  @@index([trackingNumber])
+  @@index([status])
+}
+
+model EMShippingEvents {
+  id          BigInt    @id @default(autoincrement())
+  shipmentId  BigInt    @map("shipment_id")
+  eventTime   DateTime  @map("event_time") @db.Timestamp
+  location    String?   @db.VarChar(255)
+  status      String?   @db.VarChar(100)
+  description String?   @db.Text
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamp
+
+  shipment EMShipments @relation(fields: [shipmentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("EMShippingEvents")
+  @@index([shipmentId])
+  @@index([eventTime])
+}

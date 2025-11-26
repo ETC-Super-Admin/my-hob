@@ -1,0 +1,382 @@
+model EMProducts {
+  id              BigInt    @id @default(autoincrement())
+  vendorId        BigInt    @map("vendor_id")
+  brandId         BigInt?   @map("brand_id")
+  categoryId      BigInt?   @map("category_id")
+  sku             String    @db.VarChar(100)
+  slug            String    @db.VarChar(255)
+  productType     String?   @default("physical") @map("product_type") @db.VarChar(20)
+  coverImageUrl   String?   @map("cover_image_url") @db.VarChar(500)
+  thumbnailUrl    String?   @map("thumbnail_url") @db.VarChar(500)
+  videoUrl        String?   @map("video_url") @db.VarChar(500)
+  isActive        Boolean?  @default(true) @map("is_active")
+  isFeatured      Boolean?  @default(false) @map("is_featured")
+  approvalStatus  String?   @default("pending") @map("approval_status") @db.VarChar(20)
+  rejectionReason String?   @map("rejection_reason") @db.Text
+  basePrice       Decimal   @map("base_price") @db.Decimal(10, 2)
+  ratingAverage   Decimal?  @default(0) @map("rating_average") @db.Decimal(3, 2)
+  totalReviews    Int?      @default(0) @map("total_reviews")
+  totalSold       Int?      @default(0) @map("total_sold")
+  viewCount       Int?      @default(0) @map("view_count")
+  createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamp
+  updatedAt       DateTime? @default(now()) @map("updated_at") @db.Timestamp
+  approvedAt      DateTime? @map("approved_at") @db.Timestamp
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamp
+
+  vendor   EMVendors     @relation(fields: [vendorId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  brand    EMBrands?     @relation(fields: [brandId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  category EMCategories? @relation(fields: [categoryId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  variants          EMProductVariants[]
+  images            EMProductImages[]
+  translations      EMProductTranslations[]
+  reviews           EMReviews[]
+  asBundle          EMProductBundles[]
+  wishlistItems     EMWishlistItems[]
+  couponProducts    EMCouponProducts[]
+  voucherProducts   EMVoucherProducts[]
+  chatConversations EMChatConversations[]
+
+  productViews      EMProductViewLogs[]
+  reports           EMProductReports[]
+  questions         EMProductQuestions[]
+
+  @@map("EMProducts")
+  @@index([vendorId])
+  @@unique([vendorId, sku])
+  @@index([slug])
+  @@index([brandId])
+  @@index([categoryId])
+  @@index([isActive, isFeatured])
+  @@index([vendorId, approvalStatus])
+  @@index([ratingAverage])
+  @@index([totalSold])
+}
+
+model EMCategories {
+  id             BigInt    @id @default(autoincrement())
+  parentId       BigInt?   @map("parent_id")
+  slug           String    @unique @db.VarChar(255)
+  imageUrl       String?   @map("image_url") @db.VarChar(500)
+  thumbnailUrl   String?   @map("thumbnail_url") @db.VarChar(500)
+  iconUrl        String?   @map("icon_url") @db.VarChar(500)
+  commissionRate Decimal?  @map("commission_rate") @db.Decimal(5, 2)
+  isActive       Boolean?  @default(true) @map("is_active")
+  displayOrder   Int?      @default(0) @map("display_order")
+  categoryPath   String?   @map("category_path") @db.VarChar(1000)
+  createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamp
+  updatedAt      DateTime? @default(now()) @map("updated_at") @db.Timestamp
+
+  parent   EMCategories?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onUpdate: Cascade)
+  children EMCategories[] @relation("CategoryHierarchy")
+
+  products          EMProducts[]
+  translations      EMCategoryTranslations[]
+  couponCategories  EMCouponCategories[]
+  voucherCategories EMVoucherCategories[]
+
+  @@map("EMCategories")
+  @@index([parentId])
+  @@index([slug])
+  @@index([isActive, displayOrder])
+  @@index([categoryPath])
+}
+
+model EMCategoryTranslations {
+  id              BigInt  @id @default(autoincrement())
+  categoryId      BigInt  @map("category_id")
+  languageId      Int     @map("language_id")
+  name            String  @db.VarChar(255)
+  description     String? @db.Text
+  metaTitle       String? @map("meta_title") @db.VarChar(255)
+  metaDescription String? @map("meta_description") @db.Text
+
+  category EMCategories @relation(fields: [categoryId], references: [id], onUpdate: Cascade)
+  language EMLanguages  @relation(fields: [languageId], references: [id], onUpdate: Cascade)
+
+  @@map("EMCategoryTranslations")
+  @@unique([categoryId, languageId])
+}
+
+model EMBrands {
+  id        BigInt    @id @default(autoincrement())
+  name      String    @unique @db.VarChar(255)
+  slug      String    @unique @db.VarChar(255)
+  logoUrl   String?   @map("logo_url") @db.VarChar(500)
+  isActive  Boolean?  @default(true) @map("is_active")
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamp
+  updatedAt DateTime? @default(now()) @map("updated_at") @db.Timestamp
+
+  products EMProducts[]
+
+  @@map("EMBrands")
+  @@index([slug])
+}
+
+model EMProductVariants {
+  id                     BigInt    @id @default(autoincrement())
+  productId              BigInt    @map("product_id")
+  sku                    String    @db.VarChar(100)
+  price                  Decimal   @db.Decimal(10, 2)
+  compareAtPrice         Decimal?  @map("compare_at_price") @db.Decimal(10, 2)
+  costPrice              Decimal?  @map("cost_price") @db.Decimal(10, 2)
+  stockQuantity          Int?      @default(0) @map("stock_quantity")
+  reservedQuantity       Int?      @default(0) @map("reserved_quantity")
+  lowStockThreshold      Int?      @default(10) @map("low_stock_threshold")
+  weight                 Decimal?  @db.Decimal(8, 2)
+  length                 Decimal?  @db.Decimal(8, 2)
+  width                  Decimal?  @db.Decimal(8, 2)
+  height                 Decimal?  @db.Decimal(8, 2)
+  isActive               Boolean?  @default(true) @map("is_active")
+  isDigital              Boolean?  @default(false) @map("is_digital")
+  digitalProductFileUrl  String?   @map("digital_product_file_url") @db.VarChar(500)
+  availableFrom          DateTime? @map("available_from") @db.Timestamp
+  createdAt              DateTime? @default(now()) @map("created_at") @db.Timestamp
+  updatedAt              DateTime? @default(now()) @map("updated_at") @db.Timestamp
+
+  product EMProducts @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  options           EMProductVariantOptions[]
+  priceHistory      EMProductVariantPriceHistory[]
+  images            EMProductImages[]
+  bundleItems       EMProductBundleItems[]
+  cartItems         EMCartItems[]
+  orderItems        EMOrderItems[]
+  flashSaleProducts EMFlashSaleProducts[]
+  wishlistItems     EMWishlistItems[]
+  inventoryLogs     EMInventoryLogs[]
+
+  @@map("EMProductVariants")
+  @@index([productId])
+  @@unique([productId, sku])
+  @@index([productId, isActive])
+}
+
+model EMVariantTypes {
+  id           Int       @id @default(autoincrement())
+  name         String    @unique @db.VarChar(50)
+  slug         String    @unique @db.VarChar(50)
+  displayOrder Int?      @default(0) @map("display_order")
+  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamp
+
+  translations EMVariantTypeTranslations[]
+  options      EMVariantOptions[]
+
+  @@map("EMVariantTypes")
+}
+
+model EMVariantTypeTranslations {
+  id            BigInt @id @default(autoincrement())
+  variantTypeId Int    @map("variant_type_id")
+  languageId    Int    @map("language_id")
+  name          String @db.VarChar(100)
+
+  variantType EMVariantTypes @relation(fields: [variantTypeId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  language    EMLanguages    @relation(fields: [languageId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("EMVariantTypeTranslations")
+  @@unique([variantTypeId, languageId])
+}
+
+model EMVariantOptions {
+  id            BigInt    @id @default(autoincrement())
+  variantTypeId Int       @map("variant_type_id")
+  value         String    @db.VarChar(100)
+  slug          String    @db.VarChar(100)
+  colorHex      String?   @map("color_hex") @db.VarChar(7)
+  displayOrder  Int?      @default(0) @map("display_order")
+  createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamp
+
+  variantType EMVariantTypes @relation(fields: [variantTypeId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  translations   EMVariantOptionTranslations[]
+  productVariants EMProductVariantOptions[]
+
+  @@map("EMVariantOptions")
+  @@index([variantTypeId])
+  @@unique([variantTypeId, slug])
+}
+
+model EMVariantOptionTranslations {
+  id              BigInt @id @default(autoincrement())
+  variantOptionId BigInt @map("variant_option_id")
+  languageId      Int    @map("language_id")
+  value           String @db.VarChar(100)
+
+  variantOption EMVariantOptions @relation(fields: [variantOptionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  language      EMLanguages      @relation(fields: [languageId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("EMVariantOptionTranslations")
+  @@unique([variantOptionId, languageId])
+}
+
+model EMProductVariantOptions {
+  id               BigInt @id @default(autoincrement())
+  productVariantId BigInt @map("product_variant_id")
+  variantOptionId  BigInt @map("variant_option_id")
+
+  productVariant EMProductVariants @relation(fields: [productVariantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  variantOption  EMVariantOptions  @relation(fields: [variantOptionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("EMProductVariantOptions")
+  @@unique([productVariantId, variantOptionId])
+  @@index([variantOptionId])
+}
+
+model EMProductVariantPriceHistory {
+  id               BigInt    @id @default(autoincrement())
+  productVariantId BigInt    @map("product_variant_id")
+  price            Decimal   @db.Decimal(10, 2)
+  source           String?   @db.VarChar(50)
+  createdBy        BigInt?   @map("created_by")
+  startsAt         DateTime  @map("starts_at") @db.Timestamp
+  endsAt           DateTime? @map("ends_at") @db.Timestamp
+
+  productVariant EMProductVariants @relation(fields: [productVariantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  creator        User?             @relation(fields: [createdBy], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@map("EMProductVariantPriceHistory")
+  @@index([productVariantId])
+  @@index([productVariantId, startsAt, endsAt])
+}
+
+model EMProductImages {
+  id           BigInt    @id @default(autoincrement())
+  productId    BigInt    @map("product_id")
+  variantId    BigInt?   @map("variant_id")
+  imageUrl     String    @map("image_url") @db.VarChar(500)
+  thumbnailUrl String?   @map("thumbnail_url") @db.VarChar(500)
+  altText      String?   @map("alt_text") @db.VarChar(255)
+  displayOrder Int?      @default(0) @map("display_order")
+  isPrimary    Boolean?  @default(false) @map("is_primary")
+  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamp
+
+  product EMProducts         @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  variant EMProductVariants? @relation(fields: [variantId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@map("EMProductImages")
+  @@index([productId])
+  @@index([variantId])
+  @@index([productId, displayOrder])
+}
+
+model EMProductBundles {
+  id              BigInt    @id @default(autoincrement())
+  bundleProductId BigInt    @map("bundle_product_id")
+  name            String    @db.VarChar(255)
+  sku             String    @unique @db.VarChar(100)
+  priceType       String?   @default("fixed_price") @map("price_type") @db.VarChar(20)
+  createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamp
+  updatedAt       DateTime? @default(now()) @map("updated_at") @db.Timestamp
+
+  bundleProduct EMProducts @relation(fields: [bundleProductId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  items EMProductBundleItems[]
+
+  @@map("EMProductBundles")
+  @@index([bundleProductId])
+}
+
+model EMProductBundleItems {
+  id               BigInt @id @default(autoincrement())
+  bundleId         BigInt @map("bundle_id")
+  productVariantId BigInt @map("product_variant_id")
+  quantity         Int    @default(1)
+
+  bundle         EMProductBundles  @relation(fields: [bundleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  productVariant EMProductVariants @relation(fields: [productVariantId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("EMProductBundleItems")
+  @@index([bundleId])
+  @@unique([bundleId, productVariantId])
+}
+
+model EMProductTranslations {
+  id               BigInt  @id @default(autoincrement())
+  productId        BigInt  @map("product_id")
+  languageId       Int     @map("language_id")
+  name             String  @db.VarChar(255)
+  description      String? @db.Text
+  shortDescription String? @map("short_description") @db.Text
+  metaTitle        String? @map("meta_title") @db.VarChar(255)
+  metaDescription  String? @map("meta_description") @db.Text
+  metaKeywords     String? @map("meta_keywords") @db.Text
+
+  product  EMProducts  @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  language EMLanguages @relation(fields: [languageId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("EMProductTranslations")
+  @@unique([productId, languageId])
+}
+
+model EMDigitalProductDownloads {
+  id               BigInt    @id @default(autoincrement())
+  orderItemId      BigInt    @map("order_item_id")
+  userId           BigInt    @map("user_id")
+  downloadCount    Int?      @default(0) @map("download_count")
+  lastDownloadedAt DateTime? @map("last_downloaded_at") @db.Timestamp
+  downloadToken    String?   @unique @map("download_token") @db.VarChar(255)
+  tokenExpiresAt   DateTime? @map("token_expires_at") @db.Timestamp
+
+  orderItem EMOrderItems @relation(fields: [orderItemId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("EMDigitalProductDownloads")
+  @@index([orderItemId])
+  @@index([userId])
+  @@index([downloadToken])
+}
+
+model EMProductReports {
+  id          BigInt    @id @default(autoincrement())
+  productId   BigInt    @map("product_id")
+  userId      BigInt?   @map("user_id")
+  reason      String    @db.VarChar(50)
+  description String    @db.Text
+  status      String?   @default("pending") @db.VarChar(20)
+  adminNotes  String?   @map("admin_notes") @db.Text
+  resolvedAt  DateTime? @map("resolved_at") @db.Timestamp
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamp
+
+  product EMProducts @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user    User?      @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@map("EMProductReports")
+  @@index([productId])
+  @@index([userId])
+  @@index([status])
+}
+
+model EMProductQuestions {
+  id         BigInt    @id @default(autoincrement())
+  productId  BigInt    @map("product_id")
+  userId     BigInt?   @map("user_id")
+  question   String    @db.Text
+  isAnswered Boolean?  @default(false) @map("is_answered")
+  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamp
+
+  product EMProducts @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user    User?      @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  answers EMProductAnswers[]
+
+  @@map("EMProductQuestions")
+  @@index([productId])
+  @@index([userId])
+}
+
+model EMProductAnswers {
+  id             BigInt    @id @default(autoincrement())
+  questionId     BigInt    @map("question_id")
+  userId         BigInt?   @map("user_id")
+  answer         String    @db.Text
+  isHelpfulCount Int?      @default(0) @map("is_helpful_count")
+  createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamp
+
+  question EMProductQuestions @relation(fields: [questionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user     User?              @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@map("EMProductAnswers")
+  @@index([questionId])
+  @@index([userId])
+}

@@ -1,0 +1,216 @@
+model User {
+  id                 BigInt    @id @default(autoincrement())
+  email              String    @unique @db.VarChar(255)
+  passwordHash       String    @map("password_hash") @db.VarChar(255)
+  firstName          String?   @map("first_name") @db.VarChar(100)
+  lastName           String?   @map("last_name") @db.VarChar(100)
+  phone              String?   @db.VarChar(20)
+  avatarUrl          String?   @map("avatar_url") @db.VarChar(500)
+  isActive           Boolean?  @default(true) @map("is_active")
+  isVerified         Boolean?  @default(false) @map("is_verified")
+  verificationStatus String?   @default("unverified") @map("verification_status") @db.VarChar(20)
+  blockedAt          DateTime? @map("blocked_at") @db.Timestamp
+  suspendedAt        DateTime? @map("suspended_at") @db.Timestamp
+  userType           String?   @default("customer") @map("user_type") @db.VarChar(20)
+  createdAt          DateTime? @default(now()) @map("created_at") @db.Timestamp
+  updatedAt          DateTime? @default(now()) @map("updated_at") @db.Timestamp
+  deletedAt          DateTime? @map("deleted_at") @db.Timestamp
+  lastLoginAt        DateTime? @map("last_login_at") @db.Timestamp
+
+  // Internal Relations
+  dataExports   UserDataExport[]
+  dataDeletions UserDataDeletion[]
+  consents      UserConsent[]
+  addresses     UserAddress[]
+  vouchers      UserVouchers[]
+
+  // External Relations
+  vendors              EMVendors[]
+  followedVendors      EMVendorFollowers[]
+  downloads            EMDigitalProductDownloads[]
+  createdPriceHistory  EMProductVariantPriceHistory[]
+  flashSaleLimits      EMFlashSaleUserLimits[]
+  flashSalePurchases   EMFlashSalePurchases[]
+  carts                EMCarts[]
+  orders               EMOrders[]
+  returns              EMReturns[]
+  reviews              EMReviews[]
+  helpfulReviews       EMReviewHelpful[]
+  reportedReviews      EMReviewReports[]
+  wishlists            EMWishlists[]
+  couponUsage          EMCouponUsage[]
+  createdGiftCards     EMGiftCards[]
+  referralsSent        EMReferrals[]                  @relation("Referrer")
+  referralsReceived    EMReferrals[]                  @relation("Referred")
+  notifications        EMNotifications[]
+  chatConversations    EMChatConversations[]
+  sentChatMessages     EMChatMessages[]
+  disputes             EMDisputes[]
+  sentDisputeMessages  EMDisputeMessages[]
+  activityLogs         EMActivityLogs[]
+  createdInventoryLogs EMInventoryLogs[]
+  changedOrderStatuses EMOrderStatusHistory[]
+  productViews         EMProductViewLogs[]
+  searches             EMSearchLogs[]
+  productReports       EMProductReports[]
+  questions            EMProductQuestions[]
+  answers              EMProductAnswers[]
+  vendorReports        EMVendorReports[]
+  rateLimitLogs        EMRateLimitLogs[]
+
+  // Auth Relations
+  accounts      Account[]
+  sessions      Session[]
+
+  @@map("users")
+  @@index([email])
+  @@index([isActive, isVerified])
+  @@index([userType])
+  @@index([verificationStatus])
+}
+
+model UserDataExport {
+  id        BigInt    @id @default(autoincrement())
+  userId    BigInt    @map("user_id")
+  status    String?   @default("pending") @db.VarChar(20)
+  fileUrl   String?   @map("file_url") @db.VarChar(500)
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamp
+  updatedAt DateTime? @default(now()) @map("updated_at") @db.Timestamp
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("user_data_exports")
+  @@index([userId])
+  @@index([status])
+}
+
+model UserDataDeletion {
+  id          BigInt    @id @default(autoincrement())
+  userId      BigInt    @map("user_id")
+  status      String?   @default("pending") @db.VarChar(20)
+  notes       String?   @db.Text
+  requestedAt DateTime? @default(now()) @map("requested_at") @db.Timestamp
+  completedAt DateTime? @map("completed_at") @db.Timestamp
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("user_data_deletions")
+  @@index([userId])
+  @@index([status])
+}
+
+model UserConsent {
+  id          BigInt    @id @default(autoincrement())
+  userId      BigInt    @map("user_id")
+  consentType String    @map("consent_type") @db.VarChar(50)
+  isGiven     Boolean   @map("is_given")
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamp
+  updatedAt   DateTime? @default(now()) @map("updated_at") @db.Timestamp
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("user_consent")
+  @@unique([userId, consentType])
+}
+
+model UserAddress {
+  id           BigInt    @id @default(autoincrement())
+  userId       BigInt    @map("user_id")
+  addressType  String?   @map("address_type") @db.VarChar(20)
+  isDefault    Boolean?  @default(false) @map("is_default")
+  fullName     String?   @map("full_name") @db.VarChar(200)
+  phone        String?   @db.VarChar(20)
+  addressLine1 String    @map("address_line1") @db.VarChar(255)
+  addressLine2 String?   @map("address_line2") @db.VarChar(255)
+  city         String    @db.VarChar(100)
+  state        String?   @db.VarChar(100)
+  postalCode   String    @map("postal_code") @db.VarChar(20)
+  country      String    @db.VarChar(2)
+  latitude     Decimal?  @db.Decimal(10, 8)
+  longitude    Decimal?  @db.Decimal(11, 8)
+  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamp
+  updatedAt    DateTime? @default(now()) @map("updated_at") @db.Timestamp
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("user_addresses")
+  @@index([userId])
+  @@index([userId, isDefault])
+}
+
+model UserVouchers {
+  id        BigInt    @id @default(autoincrement())
+  voucherId BigInt    @map("voucher_id")
+  userId    BigInt    @map("user_id")
+  orderId   BigInt?   @map("order_id")
+  claimedAt DateTime? @default(now()) @map("claimed_at") @db.Timestamp
+  usedAt    DateTime? @map("used_at") @db.Timestamp
+  expiresAt DateTime  @map("expires_at") @db.Timestamp
+
+  voucher EMVouchers @relation(fields: [voucherId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user    User       @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  order   EMOrders?  @relation(fields: [orderId], references: [id])
+
+  @@map("user_vouchers")
+  @@index([voucherId])
+  @@index([userId])
+  @@index([voucherId, userId])
+  @@index([orderId])
+}
+
+// --- Auth Models ---
+
+model Account {
+  id                BigInt       @id @default(autoincrement())
+  userId            BigInt       @map("user_id")
+  provider          AuthProvider
+  providerAccountId String       @map("provider_account_id")
+  accessToken       String?      @map("access_token") @db.Text
+  refreshToken      String?      @map("refresh_token") @db.Text
+  expiresAt         DateTime?    @map("expires_at")
+  tokenType         String?      @map("token_type")
+  scope             String?
+  idToken           String?      @map("id_token") @db.Text
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("user_accounts")
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("user_sessions")
+  @@index([userId])
+  @@index([token])
+}
+
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+  LINE
+}
+
+enum UserRole {
+  GOD
+  ADMIN
+  MANAGER
+  STAFF
+  USER
+  GUEST
+}
